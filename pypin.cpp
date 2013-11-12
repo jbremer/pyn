@@ -339,11 +339,9 @@ static void *PIN_GetThreadData_detour(TLS_KEY key, THREADID thread_id)
     return PIN_GetThreadData(key, thread_id);
 }
 
-static Py::PyObject *g_fini_callback;
-
-static void fini_callback(int32_t code, void *v)
+static void single_int_callback(uint32_t value, void *arg)
 {
-    Py::PyObject_CallFunction(g_fini_callback, "i", code);
+    Py::PyObject_CallFunction((Py::PyObject *) arg, "i", value);
 }
 
 static Py::PyObject *g_child_callback;
@@ -353,41 +351,6 @@ static BOOL child_callback(CHILD_PROCESS child_process, void *v)
     // TODO return the actual return value
     Py::PyObject_CallFunction(g_child_callback, "i", child_process);
     return TRUE;
-}
-
-static Py::PyObject *g_img_load_callback;
-
-static void img_load_callback(IMG img, void *v)
-{
-    Py::PyObject_CallFunction(g_img_load_callback, "i", img);
-}
-
-static Py::PyObject *g_img_unload_callback;
-
-static void img_unload_callback(IMG img, void *v)
-{
-    Py::PyObject_CallFunction(g_img_unload_callback, "i", img);
-}
-
-static Py::PyObject *g_routine_callback;
-
-static void routine_callback(RTN rtn, void *v)
-{
-    Py::PyObject_CallFunction(g_routine_callback, "i", rtn);
-}
-
-static Py::PyObject *g_trace_callback;
-
-static void trace_callback(TRACE trace, void *v)
-{
-    Py::PyObject_CallFunction(g_trace_callback, "i", trace);
-}
-
-static Py::PyObject *g_instr_callback;
-
-static void instr_callback(INS ins, void *v)
-{
-    Py::PyObject_CallFunction(g_instr_callback, "i", ins);
 }
 
 static Py::PyObject *g_syscall_entry_callback;
@@ -446,28 +409,38 @@ int main(int argc, char *argv[])
         Py::PyRun_SimpleString(buf);
     }
 
-    Py::PyObject *globals = NULL, *py_str;
+    Py::PyObject *globals = NULL, *py_value;
     sprintf(buf, "import ctypes; ctypes.memmove(0x%08lx, "
             "ctypes.byref(ctypes.c_int(id(globals()))), 4)", &globals);
     Py::PyRun_SimpleString(buf);
 
-#define CALLBACK_REGISTER(name, api) \
-    py_str = Py::PyString_FromString(#name); \
-    g_##name##_callback = Py::PyDict_GetItem(globals, py_str); \
+    // generic callback registration function
+#define CALLBACK_REG(name, api) \
+    py_value = Py::PyString_FromString(#name); \
+    g_##name##_callback = Py::PyDict_GetItem(globals, py_value); \
     if(g_##name##_callback != NULL) { \
         api(&name##_callback, NULL); \
     }
 
+    // callback registration function for callbacks
+    // with only one integer as parameter, and which return void
+#define CALLBACK_REG1(name, api, cast) \
+    py_value = Py::PyString_FromString(#name); \
+    py_value = Py::PyDict_GetItem(globals, py_value); \
+    if(py_value != NULL) { \
+        api((cast##CALLBACK) &single_int_callback, py_value); \
+    }
+
     if(globals != NULL) {
-        CALLBACK_REGISTER(fini, PIN_AddFiniFunction);
-        CALLBACK_REGISTER(child, PIN_AddFollowChildProcessFunction);
-        CALLBACK_REGISTER(img_load, IMG_AddInstrumentFunction);
-        CALLBACK_REGISTER(img_unload, IMG_AddUnloadFunction);
-        CALLBACK_REGISTER(routine, RTN_AddInstrumentFunction);
-        CALLBACK_REGISTER(trace, TRACE_AddInstrumentFunction);
-        CALLBACK_REGISTER(instr, INS_AddInstrumentFunction);
-        CALLBACK_REGISTER(syscall_entry, PIN_AddSyscallEntryFunction);
-        CALLBACK_REGISTER(syscall_exit, PIN_AddSyscallExitFunction);
+        CALLBACK_REG1(fini, PIN_AddFiniFunction, FINI_);
+        CALLBACK_REG(child, PIN_AddFollowChildProcessFunction);
+        CALLBACK_REG1(img_load, IMG_AddInstrumentFunction, IMAGE);
+        CALLBACK_REG1(img_unload, IMG_AddUnloadFunction, IMAGE);
+        CALLBACK_REG1(routine, RTN_AddInstrumentFunction, RTN_INSTRUMENT_);
+        CALLBACK_REG1(trace, TRACE_AddInstrumentFunction, TRACE_INSTRUMENT_);
+        CALLBACK_REG1(instr, INS_AddInstrumentFunction, INS_INSTRUMENT_);
+        CALLBACK_REG(syscall_entry, PIN_AddSyscallEntryFunction);
+        CALLBACK_REG(syscall_exit, PIN_AddSyscallExitFunction);
     }
 
     PIN_StartProgram();
