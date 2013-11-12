@@ -3,6 +3,9 @@
 #include <string.h>
 #include "pin.H"
 
+// TODO fix memory leaks introduced by strdup
+#define strdup _strdup
+
 #define ARRAYSIZE(arr) (sizeof(arr)/sizeof((arr)[0]))
 #define CYCLIC(arr, idx) (&arr[idx++ % ARRAYSIZE(arr)])
 
@@ -103,12 +106,7 @@ static void *g_functions[][2] = {
 
 static const char *IMG_Name_detour(IMG img)
 {
-    static char cyclic_strings[32][64]; static uint32_t cyclic_index;
-
-    string s = IMG_Name(img);
-    if(s.c_str() == NULL) return NULL;
-
-    return strcpy(*CYCLIC(cyclic_strings, cyclic_index), s.c_str());
+    return strdup(IMG_Name(img).c_str());
 }
 
 static IMG IMG_Open_detour(const char *fname)
@@ -120,22 +118,12 @@ static IMG IMG_Open_detour(const char *fname)
 
 static const char *RTN_Name_detour(RTN rtn)
 {
-    static char cyclic_strings[32][64]; static uint32_t cyclic_index;
-
-    string s = RTN_Name(rtn);
-    if(s.c_str() == NULL) return NULL;
-
-    return strcpy(*CYCLIC(cyclic_strings, cyclic_index), s.c_str());
+    return strdup(RTN_Name(rtn).c_str());
 }
 
 static const char *RTN_FindNameByAddress_detour(ADDRINT addr)
 {
-    static char cyclic_strings[32][64]; static uint32_t cyclic_index;
-
-    string s = RTN_FindNameByAddress(addr);
-    if(s.c_str() == NULL) return NULL;
-
-    return strcpy(*CYCLIC(cyclic_strings, cyclic_index), s.c_str());
+    return strdup(RTN_FindNameByAddress(addr).c_str());
 }
 
 static RTN RTN_CreateAt_detour(ADDRINT addr, const char *name)
@@ -147,7 +135,7 @@ static RTN RTN_CreateAt_detour(ADDRINT addr, const char *name)
 
 static const char *INS_Mnemonic_detour(INS ins)
 {
-    static char cyclic_strings[32][64]; static uint32_t cyclic_index;
+    static char cyclic_strings[32][32]; static uint32_t cyclic_index;
 
     string s = INS_Mnemonic(ins);
     if(s.c_str() == NULL) return NULL;
