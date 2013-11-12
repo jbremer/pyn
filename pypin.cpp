@@ -355,6 +355,59 @@ static BOOL child_callback(CHILD_PROCESS child_process, void *v)
     return TRUE;
 }
 
+static Py::PyObject *g_img_load_callback;
+
+static void img_load_callback(IMG img, void *v)
+{
+    Py::PyObject_CallFunction(g_img_load_callback, "i", img);
+}
+
+static Py::PyObject *g_img_unload_callback;
+
+static void img_unload_callback(IMG img, void *v)
+{
+    Py::PyObject_CallFunction(g_img_unload_callback, "i", img);
+}
+
+static Py::PyObject *g_routine_callback;
+
+static void routine_callback(RTN rtn, void *v)
+{
+    Py::PyObject_CallFunction(g_routine_callback, "i", rtn);
+}
+
+static Py::PyObject *g_trace_callback;
+
+static void trace_callback(TRACE trace, void *v)
+{
+    Py::PyObject_CallFunction(g_trace_callback, "i", trace);
+}
+
+static Py::PyObject *g_instr_callback;
+
+static void instr_callback(INS ins, void *v)
+{
+    Py::PyObject_CallFunction(g_instr_callback, "i", ins);
+}
+
+static Py::PyObject *g_syscall_entry_callback;
+
+static void syscall_entry_callback(
+    THREADID thread_id, CONTEXT *ctx, SYSCALL_STANDARD std, void *v)
+{
+    Py::PyObject_CallFunction(
+        g_syscall_entry_callback, "iii", thread_id, ctx, std);
+}
+
+static Py::PyObject *g_syscall_exit_callback;
+
+static void syscall_exit_callback(
+    THREADID thread_id, CONTEXT *ctx, SYSCALL_STANDARD std, void *v)
+{
+    Py::PyObject_CallFunction(
+        g_syscall_exit_callback, "iii", thread_id, ctx, std);
+}
+
 int main(int argc, char *argv[])
 {
     PIN_Init(argc, argv);
@@ -408,6 +461,13 @@ int main(int argc, char *argv[])
     if(globals != NULL) {
         CALLBACK_REGISTER(fini, PIN_AddFiniFunction);
         CALLBACK_REGISTER(child, PIN_AddFollowChildProcessFunction);
+        CALLBACK_REGISTER(img_load, IMG_AddInstrumentFunction);
+        CALLBACK_REGISTER(img_unload, IMG_AddUnloadFunction);
+        CALLBACK_REGISTER(routine, RTN_AddInstrumentFunction);
+        CALLBACK_REGISTER(trace, TRACE_AddInstrumentFunction);
+        CALLBACK_REGISTER(instr, INS_AddInstrumentFunction);
+        CALLBACK_REGISTER(syscall_entry, PIN_AddSyscallEntryFunction);
+        CALLBACK_REGISTER(syscall_exit, PIN_AddSyscallExitFunction);
     }
 
     PIN_StartProgram();

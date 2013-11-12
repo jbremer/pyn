@@ -2,16 +2,10 @@ from ctypes import CFUNCTYPE, POINTER
 from ctypes import c_int, c_char_p, c_void_p, c_longlong
 
 
-IMAGECALLBACK = CFUNCTYPE(None, c_int, c_void_p)
-RTN_INSTRUMENT_CALLBACK = CFUNCTYPE(None, c_int, c_void_p)
-TRACE_INSTRUMENT_CALLBACK = CFUNCTYPE(None, c_int, c_void_p)
-INS_INSTRUMENT_CALLBACK = CFUNCTYPE(None, c_int, c_void_p)
 AFUNPTR = CFUNCTYPE(None)
 TRACE_BUFFER_CALLBACK = CFUNCTYPE(c_void_p, c_int, c_int, c_void_p,
                                   c_void_p, c_longlong, c_void_p)
 ROOT_THREAD_FUNC = CFUNCTYPE(None, c_void_p)
-SYSCALL_ENTRY_CALLBACK = CFUNCTYPE(None, c_int, c_void_p, c_int, c_void_p)
-SYSCALL_EXIT_CALLBACK = CFUNCTYPE(None, c_int, c_void_p, c_int, c_void_p)
 
 
 # function with void return value
@@ -62,8 +56,6 @@ _pin_function_decl = {
     'IMG_Id': _i(c_int),
     'IMG_FindImgById': _i(c_int),
     'IMG_FindByAddress': _i(c_int),
-    '_IMG_AddInstrumentFunction': _v(IMAGECALLBACK, c_void_p),
-    '_IMG_AddUnloadFunction': _v(IMAGECALLBACK, c_void_p),
     'IMG_Open': _i(c_char_p),
     'IMG_Close': _v(c_int),
 
@@ -81,7 +73,6 @@ _pin_function_decl = {
     'RTN_Sym': _i(c_int),
     'RTN_Funptr': _i(c_int),
     'RTN_Id': _i(c_int),
-    '_RTN_AddInstrumentFunction': _v(RTN_INSTRUMENT_CALLBACK, c_void_p),
     'RTN_Range': _i(c_int),
     'RTN_Size': _i(c_int),
     'RTN_FindNameByAddress': _s(c_int),
@@ -99,7 +90,6 @@ _pin_function_decl = {
     '_RTN_Replace': CFUNCTYPE(AFUNPTR, c_int, AFUNPTR),
 
     # TRACE
-    '_TRACE_AddInstrumentFunction': _v(TRACE_INSTRUMENT_CALLBACK, c_void_p),
     '_TRACE_InsertCall': _v(c_int, c_int, AFUNPTR),
     'TRACE_BblHead': _i(c_int),
     'TRACE_BblTail': _i(c_int),
@@ -127,7 +117,6 @@ _pin_function_decl = {
     'BBL_HasFallThrough': _i(c_int),
 
     # INS Instrumentation
-    '_INS_AddInstrumentFunction': _v(INS_INSTRUMENT_CALLBACK, c_void_p),
     'INS_InsertCall': _v(c_int, c_int, AFUNPTR),
 
     # INS Generic Inspection
@@ -245,8 +234,6 @@ _pin_function_decl = {
     'PIN_GetThreadData': _vp(c_int, c_int),
 
     # Pin System Call
-    '_PIN_AddSyscallEntryFunction': _v(SYSCALL_ENTRY_CALLBACK, c_void_p),
-    '_PIN_AddSyscallExitFunction': _v(SYSCALL_EXIT_CALLBACK, c_void_p),
     'PIN_SetSyscallArgument': _v(c_void_p, c_int, c_int, c_int),
     'PIN_GetSyscallArgument': _i(c_void_p, c_int, c_int),
     'PIN_SetSyscallNumber': _v(c_void_p, c_int, c_int),
@@ -274,41 +261,16 @@ for name, decl in _pin_function_decl.items():
 
 # the following line(s) are actually not required,
 # but these are for the strict syntax checker(s) - part #2
-_IMG_AddInstrumentFunction = globals()['_IMG_AddInstrumentFunction']
-_IMG_AddUnloadFunction = globals()['_IMG_AddUnloadFunction']
-_RTN_AddInstrumentFunction = globals()['_RTN_AddInstrumentFunction']
 _RTN_InsertCall = globals()['_RTN_InsertCall']
 _RTN_Replace = globals()['_RTN_Replace']
-_TRACE_AddInstrumentFunction = globals()['_TRACE_AddInstrumentFunction']
 _TRACE_InsertCall = globals()['_TRACE_InsertCall']
 _BBL_InsertCall = globals()['_BBL_InsertCall']
-_INS_AddInstrumentFunction = globals()['_INS_AddInstrumentFunction']
 _PIN_DefineTraceBuffer = globals()['_PIN_DefineTraceBuffer']
 _PIN_SpawnInternalThread = globals()['_PIN_SpawnInternalThread']
-_PIN_AddSyscallEntryFunction = globals()['_PIN_AddSyscallEntryFunction']
-_PIN_AddSyscallExitFunction = globals()['_PIN_AddSyscallExitFunction']
 
 
 # override functions which accept callback functions, because
 # they need some extra care
-def IMG_AddInstrumentFunction(cb, arg):
-    cb = IMAGECALLBACK(cb)
-    _gc.extend((cb, arg))
-    _IMG_AddInstrumentFunction(cb, arg)
-
-
-def IMG_AddUnloadFunction(cb, arg):
-    cb = IMAGECALLBACK(cb)
-    _gc.extend((cb, arg))
-    _IMG_AddUnloadFunction(cb, arg)
-
-
-def RTN_AddInstrumentFunction(cb, arg):
-    cb = RTN_INSTRUMENT_CALLBACK(cb)
-    _gc.extend((cb, arg))
-    _RTN_AddInstrumentFunction(cb, arg)
-
-
 def RTN_InsertCall(rtn, action, cb, *args):
     cb = AFUNPTR(cb)
     _gc.append(cb)
@@ -319,12 +281,6 @@ def RTN_Replace(rtn, func):
     func = AFUNPTR(func)
     _gc.append(func)
     _RTN_Replace(rtn, func)
-
-
-def TRACE_AddInstrumentFunction(cb, arg):
-    cb = TRACE_INSTRUMENT_CALLBACK(cb)
-    _gc.extend((cb, arg))
-    _TRACE_AddInstrumentFunction(cb, arg)
 
 
 def TRACE_InsertCall(trace, action, cb, *args):
@@ -339,12 +295,6 @@ def BBL_InsertCall(bbl, action, cb, *args):
     _BBL_InsertCall(bbl, action, cb, *args)
 
 
-def INS_AddInstrumentFunction(cb, arg):
-    cb = INS_INSTRUMENT_CALLBACK(cb)
-    _gc.extend((cb, arg))
-    _INS_AddInstrumentFunction(cb, arg)
-
-
 def PIN_DefineTraceBuffer(record_size, num_pages, cb, arg):
     cb = TRACE_BUFFER_CALLBACK(cb)
     _gc.extend((cb, arg))
@@ -355,15 +305,3 @@ def PIN_SpawnInternalThread(cb, arg, stack_size, thread_uid):
     cb = ROOT_THREAD_FUNC(cb)
     _gc.extend((cb, arg, thread_uid))
     _PIN_SpawnInternalThread(cb, arg, stack_size, thread_uid)
-
-
-def PIN_AddSyscallEntryFunction(cb, arg):
-    cb = SYSCALL_ENTRY_CALLBACK(cb)
-    _gc.extend((cb, arg))
-    _PIN_AddSyscallEntryFunction(cb, arg)
-
-
-def PIN_AddSyscallExitFunction(cb, arg):
-    cb = SYSCALL_EXIT_CALLBACK(cb)
-    _gc.extend((cb, arg))
-    _PIN_AddSyscallExitFunction(cb, arg)
