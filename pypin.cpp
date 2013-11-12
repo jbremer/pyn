@@ -208,6 +208,22 @@ static const char *PIN_UndecorateSymbolName_detour(
     return strdup(PIN_UndecorateSymbolName(symbol_name, style).c_str());
 }
 
+static Py::PyObject *g_fini_callback;
+
+static void fini_callback(int32_t code, void *v)
+{
+    Py::PyObject_CallFunction(g_fini_callback, "i", code);
+}
+
+static Py::PyObject *g_child_callback;
+
+static BOOL child_callback(CHILD_PROCESS child_process, void *v)
+{
+    // TODO return the actual return value
+    Py::PyObject_CallFunction(g_child_callback, "i", child_process);
+    return TRUE;
+}
+
 int main(int argc, char *argv[])
 {
     PIN_Init(argc, argv);
@@ -244,6 +260,23 @@ int main(int argc, char *argv[])
         // python code injection!!1
         snprintf(buf, sizeof(buf), "exec open('%s', 'rb').read()", argv[i]);
         Py::PyRun_SimpleString(buf);
+    }
+
+    Py::PyObject *globals = NULL, *py_str;
+    sprintf(buf, "import ctypes; ctypes.memmove(0x%08lx, "
+            "ctypes.byref(ctypes.c_int(id(globals()))), 4)", &globals);
+    Py::PyRun_SimpleString(buf);
+
+#define CALLBACK_REGISTER(name, api) \
+    py_str = Py::PyString_FromString(#name); \
+    g_##name##_callback = Py::PyDict_GetItem(globals, py_str); \
+    if(g_##name##_callback != NULL) { \
+        api(&name##_callback, NULL); \
+    }
+
+    if(globals != NULL) {
+        CALLBACK_REGISTER(fini, PIN_AddFiniFunction);
+        CALLBACK_REGISTER(child, PIN_AddFollowChildProcessFunction);
     }
 
     PIN_StartProgram();
