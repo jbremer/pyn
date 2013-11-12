@@ -1,5 +1,5 @@
-from ctypes import CFUNCTYPE
-from ctypes import c_int, c_char_p, c_void_p
+from ctypes import CFUNCTYPE, POINTER
+from ctypes import c_int, c_char_p, c_void_p, c_longlong
 
 
 IMAGECALLBACK = CFUNCTYPE(None, c_int, c_void_p)
@@ -7,11 +7,21 @@ RTN_INSTRUMENT_CALLBACK = CFUNCTYPE(None, c_int, c_void_p)
 TRACE_INSTRUMENT_CALLBACK = CFUNCTYPE(None, c_int, c_void_p)
 INS_INSTRUMENT_CALLBACK = CFUNCTYPE(None, c_int, c_void_p)
 AFUNPTR = CFUNCTYPE(None)
+TRACE_BUFFER_CALLBACK = CFUNCTYPE(c_void_p, c_int, c_int, c_void_p,
+                                  c_void_p, c_longlong, c_void_p)
+ROOT_THREAD_FUNC = CFUNCTYPE(None, c_void_p)
+SYSCALL_ENTRY_CALLBACK = CFUNCTYPE(None, c_int, c_void_p, c_int, c_void_p)
+SYSCALL_EXIT_CALLBACK = CFUNCTYPE(None, c_int, c_void_p, c_int, c_void_p)
 
 
 # function with void return value
 def _v(*args):
     return CFUNCTYPE(None, *args)
+
+
+# function with void pointer as return value
+def _vp(*args):
+    return CFUNCTYPE(c_void_p, *args)
 
 
 # function with integer (or address, for that matter) return value
@@ -121,15 +131,66 @@ _pin_function_decl = {
     'INS_InsertCall': _v(c_int, c_int, AFUNPTR),
 
     # INS Generic Inspection
+    'INS_Category': _i(c_int),
+    'INS_Extension': _i(c_int),
+    'INS_MemoryOperandSize': _i(c_int, c_int),
+    'INS_MemoryWriteSize': _i(c_int),
+    'INS_GetPredicate': _i(c_int),
+    'INS_MemoryReadSize': _i(c_int),
+    'INS_IsMemoryRead': _i(c_int),
+    'INS_IsMemoryWrite': _i(c_int),
+    'INS_HasMemoryRead2': _i(c_int),
+    'INS_HasFallThrough': _i(c_int),
+    'INS_IsLea': _i(c_int),
+    'INS_IsNop': _i(c_int),
+    'OPCODE_StringShort': _s(c_int),
     'INS_Mnemonic': _s(c_int),
+    'INS_IsBranch': _i(c_int),
+    'INS_IsDirectBranch': _i(c_int),
+    'INS_IsDirectCall': _i(c_int),
+    'INS_IsDirectBranchOrCall': _i(c_int),
+    'INS_IsBranchOrCall': _i(c_int),
+    'INS_Stutters': _i(c_int),
+    'INS_IsCall': _i(c_int),
+    'INS_IsProcedureCall': _i(c_int),
+    'INS_IsRet': _i(c_int),
+    'INS_IsSysret': _i(c_int),
+    'INS_IsPrefetch': _i(c_int),
+    'INS_IsAtomicUpdate': _i(c_int),
+    'INS_IsIndirectBranchOrCall': _i(c_int),
+    'INS_RegR': _i(c_int),
+    'INS_RegW': _i(c_int),
+    'INS_Opcode': _i(c_int),
+    'CATEGORY_StringShort': _s(c_int),
+    'EXTENSION_StringShort': _s(c_int),
+    'INS_MaxNumRRegs': _i(c_int),
+    'INS_MaxNumWRegs': _i(c_int),
+    'INS_RegRContain': _i(c_int, c_int),
+    'INS_RegWContain': _i(c_int, c_int),
+    'INS_IsStackRead': _i(c_int),
+    'INS_IsStackWrite': _i(c_int),
+    'INS_IsIpRelRead': _i(c_int),
+    'INS_IsIpRelWrite': _i(c_int),
+    # 'INS_IsPredicated': _i(c_int),
     'INS_IsOriginal': _i(c_int),
     'INS_Disassemble': _s(c_int),
+    'INS_MemoryOperandCount': _i(c_int),
+    'INS_OperandIsAddressGenerator': _i(c_int, c_int),
+    'INS_MemoryOperandIsRead': _i(c_int, c_int),
+    'INS_MemoryOperandIsWritten': _i(c_int, c_int),
+    'INS_IsSyscall': _i(c_int),
+    'INS_SyscallStd': _i(c_int),
+    'INS_Rtn': _i(c_int),
     'INS_Next': _i(c_int),
     'INS_Prev': _i(c_int),
     'INS_Invalid': _i(),
     'INS_Valid': _i(c_int),
     'INS_Address': _i(c_int),
     'INS_Size': _i(c_int),
+    'INS_DirectBranchOrCallTargetAddress': _i(c_int),
+    'INS_NextAddress': _i(c_int),
+
+    # INS ia32/intel64 Inspection TODO
 
     # INS Modification
     'INS_InsertIndirectJump': _v(c_int, c_int, c_int),
@@ -148,6 +209,56 @@ _pin_function_decl = {
     'SYM_Index': _i(c_int),
     'SYM_Address': _i(c_int),
     'PIN_UndecorateSymbolName': _s(c_char_p, c_int),
+
+    # Controlling and Initializing
+    'PIN_VmFullPath': _s(),
+    'PIN_SafeCopy': _i(c_void_p, c_void_p, c_int),
+
+    # Fast Buffering
+    '_PIN_DefineTraceBuffer': _i(c_int, c_int,
+                                 TRACE_BUFFER_CALLBACK, c_void_p),
+    'PIN_AllocateBuffer': _vp(c_int),
+    'PIN_DeallocateBuffer': _v(c_int, c_void_p),
+    'PIN_GetBufferPointer': _vp(c_void_p, c_int),
+
+    # Pin Process
+    'PIN_IsProcessExiting': _i(),
+    'PIN_ExitProcess': _v(c_int),
+    'PIN_GetPid': _i(),
+    'PIN_ExitApplication': _v(c_int),
+
+    # Pin Thread
+    'PIN_GetTid': _i(),
+    'PIN_ThreadId': _i(),
+    'PIN_ThreadUid': _i(),
+    'PIN_GetParentTid': _i(),
+    'PIN_Sleep': _v(c_int),
+    'PIN_Yield': _v(),
+    '_PIN_SpawnInternalThread': _i(ROOT_THREAD_FUNC, c_void_p,
+                                   c_int, POINTER(c_int)),
+    'PIN_ExitThread': _v(c_int),
+    'PIN_IsApplicationThread': _i(),
+    'PIN_WaitForThreadTermination': _i(c_void_p, c_int, POINTER(c_int)),
+    'PIN_CreateThreadDataKey': _i(c_void_p),
+    'PIN_DeleteThreadDataKey': _i(c_int),
+    'PIN_SetThreadData': _i(c_int, c_void_p, c_int),
+    'PIN_GetThreadData': _vp(c_int, c_int),
+
+    # Pin System Call
+    '_PIN_AddSyscallEntryFunction': _v(SYSCALL_ENTRY_CALLBACK, c_void_p),
+    '_PIN_AddSyscallExitFunction': _v(SYSCALL_EXIT_CALLBACK, c_void_p),
+    'PIN_SetSyscallArgument': _v(c_void_p, c_int, c_int, c_int),
+    'PIN_GetSyscallArgument': _i(c_void_p, c_int, c_int),
+    'PIN_SetSyscallNumber': _v(c_void_p, c_int, c_int),
+    'PIN_GetSyscallNumber': _i(c_void_p, c_int),
+    'PIN_GetSyscallReturn': _i(c_void_p, c_int),
+    'PIN_GetSyscallErrno': _i(c_void_p, c_int),
+
+    # Context Manipulation
+    'PIN_SetContextReg': _v(c_void_p, c_int, c_int),
+    'PIN_GetContextReg': _i(c_void_p, c_int),
+    'PIN_SaveContext': _v(c_void_p, c_void_p),
+    'PIN_ExecuteAt': _v(c_void_p),
 }
 
 # the following line(s) are actually not required,
@@ -172,6 +283,10 @@ _TRACE_AddInstrumentFunction = globals()['_TRACE_AddInstrumentFunction']
 _TRACE_InsertCall = globals()['_TRACE_InsertCall']
 _BBL_InsertCall = globals()['_BBL_InsertCall']
 _INS_AddInstrumentFunction = globals()['_INS_AddInstrumentFunction']
+_PIN_DefineTraceBuffer = globals()['_PIN_DefineTraceBuffer']
+_PIN_SpawnInternalThread = globals()['_PIN_SpawnInternalThread']
+_PIN_AddSyscallEntryFunction = globals()['_PIN_AddSyscallEntryFunction']
+_PIN_AddSyscallExitFunction = globals()['_PIN_AddSyscallExitFunction']
 
 
 # override functions which accept callback functions, because
@@ -228,3 +343,27 @@ def INS_AddInstrumentFunction(cb, arg):
     cb = INS_INSTRUMENT_CALLBACK(cb)
     _gc.extend((cb, arg))
     _INS_AddInstrumentFunction(cb, arg)
+
+
+def PIN_DefineTraceBuffer(record_size, num_pages, cb, arg):
+    cb = TRACE_BUFFER_CALLBACK(cb)
+    _gc.extend((cb, arg))
+    _PIN_DefineTraceBuffer(record_size, num_pages, cb, arg)
+
+
+def PIN_SpawnInternalThread(cb, arg, stack_size, thread_uid):
+    cb = ROOT_THREAD_FUNC(cb)
+    _gc.extend((cb, arg, thread_uid))
+    _PIN_SpawnInternalThread(cb, arg, stack_size, thread_uid)
+
+
+def PIN_AddSyscallEntryFunction(cb, arg):
+    cb = SYSCALL_ENTRY_CALLBACK(cb)
+    _gc.extend((cb, arg))
+    _PIN_AddSyscallEntryFunction(cb, arg)
+
+
+def PIN_AddSyscallExitFunction(cb, arg):
+    cb = SYSCALL_EXIT_CALLBACK(cb)
+    _gc.extend((cb, arg))
+    _PIN_AddSyscallExitFunction(cb, arg)

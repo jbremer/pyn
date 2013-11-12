@@ -21,11 +21,17 @@ static IMG IMG_Open_detour(const char *fname);
 static const char *RTN_Name_detour(RTN rtn);
 static const char *RTN_FindNameByAddress_detour(ADDRINT addr);
 static RTN RTN_CreateAt_detour(ADDRINT addr, const char *name);
+static const char *OPCODE_StringShort_detour(uint32_t opcode);
 static const char *INS_Mnemonic_detour(INS ins);
+static const char *CATEGORY_StringShort_detour(uint32_t num);
+static const char *EXTENSION_StringShort_detour(uint32_t num);
 static const char *INS_Disassemble_detour(INS ins);
 static const char *SYM_Name_detour(SYM sym);
 static const char *PIN_UndecorateSymbolName_detour(
     const char *symbol_name, UNDECORATION style);
+static BOOL PIN_SetThreadData_detour(
+    TLS_KEY key, const void *data, THREADID thread_id);
+static void *PIN_GetThreadData_detour(TLS_KEY key, THREADID thread_id);
 
 static void *g_functions[][2] = {
     // IMG - Image Object
@@ -119,15 +125,64 @@ static void *g_functions[][2] = {
     F(INS_InsertCall),
 
     // INS Generic Inspection
+    F(INS_Category),
+    F(INS_Extension),
+    F(INS_MemoryOperandSize),
+    F(INS_MemoryWriteSize),
+    F(INS_GetPredicate),
+    F(INS_MemoryReadSize),
+    F(INS_IsMemoryRead),
+    F(INS_IsMemoryWrite),
+    F(INS_HasMemoryRead2),
+    F(INS_HasFallThrough),
+    F(INS_IsLea),
+    F(INS_IsNop),
+    F2(OPCODE_StringShort),
     F2(INS_Mnemonic),
+    F(INS_IsBranch),
+    F(INS_IsDirectBranch),
+    F(INS_IsDirectCall),
+    F(INS_IsDirectBranchOrCall),
+    F(INS_IsBranchOrCall),
+    F(INS_Stutters),
+    F(INS_IsCall),
+    F(INS_IsProcedureCall),
+    F(INS_IsRet),
+    F(INS_IsSysret),
+    F(INS_IsPrefetch),
+    F(INS_IsAtomicUpdate),
+    F(INS_IsIndirectBranchOrCall),
+    F(INS_RegR),
+    F(INS_RegW),
+    F(INS_Opcode),
+    F2(CATEGORY_StringShort),
+    F2(EXTENSION_StringShort),
+    F(INS_MaxNumRRegs),
+    F(INS_MaxNumWRegs),
+    F(INS_RegRContain),
+    F(INS_RegWContain),
+    F(INS_IsStackRead),
+    F(INS_IsStackWrite),
+    F(INS_IsIpRelRead),
+    F(INS_IsIpRelWrite),
+    // F(INS_IsPredicated),                                (
     F(INS_IsOriginal),
     F2(INS_Disassemble),
+    F(INS_MemoryOperandCount),
+    F(INS_OperandIsAddressGenerator),
+    F(INS_MemoryOperandIsRead),
+    F(INS_MemoryOperandIsWritten),
+    F(INS_IsSyscall),
+    F(INS_SyscallStd),
+    F(INS_Rtn),
     F(INS_Next),
     F(INS_Prev),
     F(INS_Invalid),
     F(INS_Valid),
     F(INS_Address),
     F(INS_Size),
+    F(INS_DirectBranchOrCallTargetAddress),
+    F(INS_NextAddress),
 
     // INS Modification
     F(INS_InsertIndirectJump),
@@ -146,6 +201,54 @@ static void *g_functions[][2] = {
     F(SYM_Index),
     F(SYM_Address),
     F2(PIN_UndecorateSymbolName),
+
+    // Controlling and Initializing
+    F(PIN_VmFullPath),
+    F(PIN_SafeCopy),
+
+    // Fast Buffering
+    F(PIN_DefineTraceBuffer),
+    F(PIN_AllocateBuffer),
+    F(PIN_DeallocateBuffer),
+    F(PIN_GetBufferPointer),
+
+    // Pin Process
+    F(PIN_IsProcessExiting),
+    F(PIN_ExitProcess),
+    F(PIN_GetPid),
+    F(PIN_ExitApplication),
+
+    // Pin Thread
+    F(PIN_GetTid),
+    F(PIN_ThreadId),
+    F(PIN_ThreadUid),
+    F(PIN_GetParentTid),
+    F(PIN_Sleep),
+    F(PIN_Yield),
+    F(PIN_SpawnInternalThread),
+    F(PIN_ExitThread),
+    F(PIN_IsApplicationThread),
+    F(PIN_WaitForThreadTermination),
+    F(PIN_CreateThreadDataKey),
+    F(PIN_DeleteThreadDataKey),
+    F2(PIN_SetThreadData),
+    F2(PIN_GetThreadData),
+
+    // Pin System Call
+    F(PIN_AddSyscallEntryFunction),
+    F(PIN_AddSyscallExitFunction),
+    F(PIN_SetSyscallArgument),
+    F(PIN_GetSyscallArgument),
+    F(PIN_SetSyscallNumber),
+    F(PIN_GetSyscallNumber),
+    F(PIN_GetSyscallReturn),
+    F(PIN_GetSyscallErrno),
+
+    // Context Manipulation
+    F(PIN_SetContextReg),
+    F(PIN_GetContextReg),
+    F(PIN_SaveContext),
+    F(PIN_ExecuteAt),
 };
 
 static const char *IMG_Name_detour(IMG img)
@@ -177,6 +280,11 @@ static RTN RTN_CreateAt_detour(ADDRINT addr, const char *name)
     return RTN_CreateAt(addr, name);
 }
 
+static const char *OPCODE_StringShort_detour(uint32_t opcode)
+{
+    return strdup(OPCODE_StringShort(opcode).c_str());
+}
+
 static const char *INS_Mnemonic_detour(INS ins)
 {
     static char cyclic_strings[32][32]; static uint32_t cyclic_index;
@@ -185,6 +293,16 @@ static const char *INS_Mnemonic_detour(INS ins)
     if(s.c_str() == NULL) return NULL;
 
     return strcpy(*CYCLIC(cyclic_strings, cyclic_index), s.c_str());
+}
+
+static const char *CATEGORY_StringShort_detour(uint32_t num)
+{
+    return strdup(CATEGORY_StringShort(num).c_str());
+}
+
+static const char *EXTENSION_StringShort_detour(uint32_t num)
+{
+    return strdup(EXTENSION_StringShort(num).c_str());
 }
 
 static const char *INS_Disassemble_detour(INS ins)
@@ -206,6 +324,19 @@ static const char *PIN_UndecorateSymbolName_detour(
     const char *symbol_name, UNDECORATION style)
 {
     return strdup(PIN_UndecorateSymbolName(symbol_name, style).c_str());
+}
+
+// PIN_SetThreadData and PIN_GetThreadData are overloaded,
+// hence we use a detour to get a single function pointer
+static BOOL PIN_SetThreadData_detour(
+    TLS_KEY key, const void *data, THREADID thread_id)
+{
+    return PIN_SetThreadData(key, data, thread_id);
+}
+
+static void *PIN_GetThreadData_detour(TLS_KEY key, THREADID thread_id)
+{
+    return PIN_GetThreadData(key, thread_id);
 }
 
 static Py::PyObject *g_fini_callback;
