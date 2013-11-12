@@ -23,6 +23,9 @@ static const char *RTN_FindNameByAddress_detour(ADDRINT addr);
 static RTN RTN_CreateAt_detour(ADDRINT addr, const char *name);
 static const char *INS_Mnemonic_detour(INS ins);
 static const char *INS_Disassemble_detour(INS ins);
+static const char *SYM_Name_detour(SYM sym);
+static const char *PIN_UndecorateSymbolName_detour(
+    const char *symbol_name, UNDECORATION style);
 
 static void *g_functions[][2] = {
     // IMG - Image Object
@@ -52,6 +55,10 @@ static void *g_functions[][2] = {
     F2(IMG_Open),
     F(IMG_Close),
 
+    // APP
+    F(APP_ImgHead),
+    F(APP_ImgTail),
+
     // RTN - Routine Object
     F(RTN_Sec),
     F(RTN_Next),
@@ -79,9 +86,33 @@ static void *g_functions[][2] = {
     F2(RTN_CreateAt),
     F(RTN_Replace),
 
-    // APP
-    F(APP_ImgHead),
-    F(APP_ImgTail),
+    // TRACE - Single entrance, multiple exit
+    F(TRACE_AddInstrumentFunction),
+    F(TRACE_InsertCall),
+    F(TRACE_BblHead),
+    F(TRACE_BblTail),
+    F(TRACE_Original),
+    F(TRACE_Address),
+    F(TRACE_Size),
+    F(TRACE_Rtn),
+    F(TRACE_HasFallThrough),
+    F(TRACE_NumBbl),
+    F(TRACE_NumIns),
+    F(TRACE_StubSize),
+
+    // BBL - Single entrance, single exit
+    F(BBL_MoveAllAttributes),
+    F(BBL_NumIns),
+    F(BBL_InsHead),
+    F(BBL_InsTail),
+    F(BBL_Next),
+    F(BBL_Prev),
+    F(BBL_Valid),
+    F(BBL_Original),
+    F(BBL_Address),
+    F(BBL_Size),
+    F(BBL_InsertCall),
+    F(BBL_HasFallThrough),
 
     // INS Instrumentation
     F(INS_AddInstrumentFunction),
@@ -102,6 +133,19 @@ static void *g_functions[][2] = {
     F(INS_InsertIndirectJump),
     F(INS_InsertDirectJump),
     F(INS_Delete),
+
+    // SYM - Symbol Object
+    F(SYM_Next),
+    F(SYM_Prev),
+    F2(SYM_Name),
+    F(SYM_Invalid),
+    F(SYM_Valid),
+    F(SYM_Dynamic),
+    F(SYM_IFunc),
+    F(SYM_Value),
+    F(SYM_Index),
+    F(SYM_Address),
+    F2(PIN_UndecorateSymbolName),
 };
 
 static const char *IMG_Name_detour(IMG img)
@@ -151,6 +195,17 @@ static const char *INS_Disassemble_detour(INS ins)
     if(s.c_str() == NULL) return NULL;
 
     return strcpy(*CYCLIC(cyclic_strings, cyclic_index), s.c_str());
+}
+
+static const char *SYM_Name_detour(SYM sym)
+{
+    return strdup(SYM_Name(sym).c_str());
+}
+
+static const char *PIN_UndecorateSymbolName_detour(
+    const char *symbol_name, UNDECORATION style)
+{
+    return strdup(PIN_UndecorateSymbolName(symbol_name, style).c_str());
 }
 
 int main(int argc, char *argv[])
