@@ -5,7 +5,11 @@
 #include "py.h"
 
 // TODO fix memory leaks introduced by strdup
-#define strdup _strdup
+
+#ifdef _MSC_VER
+# define strdup _strdup
+# define snprintf _snprintf
+#endif
 
 #define ARRAYSIZE(arr) (sizeof(arr)/sizeof((arr)[0]))
 #define CYCLIC(arr, idx) (&arr[idx++ % ARRAYSIZE(arr)])
