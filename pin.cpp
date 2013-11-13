@@ -423,15 +423,15 @@ int main(int argc, char *argv[])
         pyrun_simple_string(buf);
     }
 
-    void *globals = NULL, *py_value;
+    void *py_globals = NULL, *py_value;
     sprintf(buf, "import ctypes; ctypes.memmove(0x%08lx, "
-            "ctypes.byref(ctypes.c_int(id(globals()))), 4)", &globals);
+            "ctypes.byref(ctypes.c_int(id(globals()))), 4)", &py_globals);
     pyrun_simple_string(buf);
 
     // generic callback registration function
 #define CALLBACK_REG(name, api) \
     py_value = pystring_from_string(#name); \
-    g_##name##_callback = pydict_get_item(globals, py_value); \
+    g_##name##_callback = pydict_get_item(py_globals, py_value); \
     if(g_##name##_callback != NULL) { \
         api(&name##_callback, NULL); \
     }
@@ -440,12 +440,12 @@ int main(int argc, char *argv[])
     // with only one integer as parameter, and which return void
 #define CALLBACK_REG1(name, api, cast) \
     py_value = pystring_from_string(#name); \
-    py_value = pydict_get_item(globals, py_value); \
+    py_value = pydict_get_item(py_globals, py_value); \
     if(py_value != NULL) { \
         api((cast##CALLBACK) &single_int_callback, py_value); \
     }
 
-    if(globals != NULL) {
+    if(py_globals != NULL) {
         CALLBACK_REG1(fini, PIN_AddFiniFunction, FINI_);
         CALLBACK_REG(child, PIN_AddFollowChildProcessFunction);
         CALLBACK_REG1(img_load, IMG_AddInstrumentFunction, IMAGE);
