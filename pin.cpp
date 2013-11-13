@@ -14,7 +14,11 @@
 #define ARRAYSIZE(arr) (sizeof(arr)/sizeof((arr)[0]))
 #define CYCLIC(arr, idx) (&arr[idx++ % ARRAYSIZE(arr)])
 
-#define FMTPTR "0x%08x"
+#if ULONG_MAX == UINT_MAX
+# define FMTPTR "0x%08x"
+#else
+# define FMTPTR "0x%016lx"
+#endif
 
 #define F(name) {#name, (const void *) &name}
 #define F2(name) {#name, (const void *) &name##_detour}
@@ -390,8 +394,7 @@ int main(int argc, char *argv[])
         pyrun_simple_string(buf);
     }
 
-// #if (sizeof(long) == 4)
-#if 1
+#if ULONG_MAX == UINT_MAX
     pyrun_simple_string("x86, x64 = True, False");
 #else
     pyrun_simple_string("x86, x64 = False, True");
