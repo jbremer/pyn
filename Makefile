@@ -10,6 +10,8 @@ ifeq ($(OS),Windows_NT)
 	PINTOOLS = pypin-x86.dll
 else
 	PYTHON = /usr/include/python2.7
+	LIBS86 = $(PINTOOL)/ia32/runtime/cpplibs
+	LIBS64 = $(PINTOOL)/intel64/runtime/cpplibs
 	OBJECTS86 = pin-x86.o py-x86.o
 	OBJECTS64 = pin-x64.o py-x64.o
 	PINTOOLS = pypin-x86.so pypin-x64.so
@@ -38,6 +40,50 @@ pypin-x86.dll: $(OBJECTS86)
 		/LIBPATH:$(PINTOOL)\extras\xed2-ia32\lib /OUT:$@ $^ pin.lib \
 		/LIBPATH:$(PYTHON)\Libs python27.lib \
 		libxed.lib libcpmt.lib libcmt.lib pinvm.lib kernel32.lib ntdll-32.lib
+
+py-x86.o: py.cpp
+	$(CXX) -c -o $@ $^ -I$(PYTHON) -m32
+
+pin-x86.o: pin.cpp
+	$(CXX) -DBIGARRAY_MULTIPLIER=1 -DUSING_XED -Wall -Werror -m32 \
+		-Wno-unknown-pragmas -fno-stack-protector -DTARGET_IA32 \
+		-DHOST_IA32E -fPIC -DTARGET_LINUX \
+		-I$(PINTOOL)/source/include/pin \
+		-I$(PINTOOL)/source/include/pin/gen \
+		-I$(PINTOOL)/extras/components/include \
+		-I$(PINTOOL)/extras/xed2-ia32/include \
+		-I$(PINTOOL)/source/tools/InstLib \
+		-O3 -fomit-frame-pointer -fno-strict-aliasing -c -o $@ $^
+
+pypin-x86.so: $(OBJECTS86)
+	$(CXX) -shared -Wl,--hash-style=sysv -Wl,-Bsymbolic -m32 \
+		-Wl,--version-script=$(PINTOOL)/source/include/pin/pintool.ver \
+		-o $@ $^ -L$(PINTOOL)/ia32/lib -L$(PINTOOL)/ia32/lib-ext \
+		-L$(PINTOOL)/ia32/runtime/glibc \
+		-L$(PINTOOL)/extras/xed2-ia32/lib \
+		-lpin -lxed -ldwarf -lelf -ldl -lpython2.7 -L$(LIBS86)
+
+py-x64.o: py.cpp
+	$(CXX) -c -o $@ $^ -I$(PYTHON) -fPIC
+
+pin-x64.o: pin.cpp
+	$(CXX) -DBIGARRAY_MULTIPLIER=1 -DUSING_XED -Wall -Werror \
+		-Wno-unknown-pragmas -fno-stack-protector -DTARGET_IA32E \
+		-DHOST_IA32E -fPIC -DTARGET_LINUX \
+		-I$(PINTOOL)/source/include/pin \
+		-I$(PINTOOL)/source/include/pin/gen \
+		-I$(PINTOOL)/extras/components/include \
+		-I$(PINTOOL)/extras/xed2-intel64/include \
+		-I$(PINTOOL)/source/tools/InstLib \
+		-O3 -fomit-frame-pointer -fno-strict-aliasing -c -o $@ $^ -fPIC
+
+pypin-x64.so: $(OBJECTS64)
+	$(CXX) -shared -Wl,--hash-style=sysv -Wl,-Bsymbolic \
+		-Wl,--version-script=$(PINTOOL)/source/include/pin/pintool.ver \
+		-o $@ $^ -L$(PINTOOL)/intel64/lib -L$(PINTOOL)/intel64/lib-ext \
+		-L$(PINTOOL)/intel64/runtime/glibc \
+		-L$(PINTOOL)/extras/xed2-intel64/lib \
+		-lpin -lxed -ldwarf -lelf -ldl -lpython2.7 -L$(LIBS64)
 
 test:
 	make -C tests test
