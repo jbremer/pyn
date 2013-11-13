@@ -387,8 +387,22 @@ int main(int argc, char *argv[])
         pyrun_simple_string(buf);
     }
 
+// #if (sizeof(long) == 4)
+#if 1
+    pyrun_simple_string("x86, x64 = True, False");
+#else
+    pyrun_simple_string("x86, x64 = False, True");
+#endif
+
     // we want to execute pypin in the current namespace
     pyrun_simple_string("exec open('pypin.py', 'rb').read()");
+
+    // turns out that IARG_END is a macro which puts IARG_FILE_NAME and
+    // IARG_LINE_NO, with their values accordingly, in the argument list as
+    // well.. as we take care of this inside our *_InsertCall statements, we
+    // can ignore the "real" meaning of IARG_END, and just assign it IARG_LAST
+    // TODO actually add some special handling for IARG_END / whatever
+    pyrun_simple_string("IARG_END = IARG_LAST");
 
     // manually parse argv, because KNOB - do you even parse?!
     for (int i = 0, tool_arg_start = -1; i < argc; i++) {
