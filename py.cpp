@@ -1,6 +1,9 @@
+#include "Python.h"
 #include <stdio.h>
 #include <stdint.h>
-#include "Python.h"
+#include <string>
+
+#define _(s) ((char *) std::string(s).c_str())
 
 void py_init()
 {
@@ -29,17 +32,17 @@ void *pydict_get_item(void *dict, void *key)
 
 void py_single_int_callback(void *obj, uintptr_t value)
 {
-    PyObject_CallFunction((PyObject *) obj, "l", value);
+    PyObject_CallFunction((PyObject *) obj, _("l"), value);
 }
 
-int py_single_int_bool_callback(void *obj, uint32_t value)
+int py_single_int_bool_callback(void *obj, uintptr_t value)
 {
     // TODO return the actual return value
-    PyObject_CallFunction((PyObject *) obj, "l", value);
+    PyObject_CallFunction((PyObject *) obj, _("l"), value);
     return 1;
 }
 
 void py_three_int_callback(void *obj, uintptr_t a, uintptr_t b, uintptr_t c)
 {
-    PyObject_CallFunction((PyObject *) obj, "lll", a, b, c);
+    PyObject_CallFunction((PyObject *) obj, _("lll"), a, b, c);
 }
