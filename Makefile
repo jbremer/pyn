@@ -15,7 +15,9 @@ else
 	PINTOOLS = pypin-x86.so pypin-x64.so
 endif
 
-default: $(OBJECTS86) $(OBJECTS64) $(PINTOOLS)
+STUFF = $(OBJECTS86) $(OBJECTS64) $(PINTOOLS)
+
+default: $(STUFF)
 
 py-x86.obj: py.cpp
 	$(CL) /c /MT /EHs- /EHa- /wd4530 /Gy /O2 /I$(PYTHON)/include $^ /Fo$@
@@ -41,4 +43,4 @@ test:
 	make -C tests test
 
 clean:
-	rm '*.dll' '*.exp' '*.lib' '*.obj'
+	rm -f $(STUFF)
