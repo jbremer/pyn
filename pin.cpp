@@ -14,8 +14,10 @@
 #define ARRAYSIZE(arr) (sizeof(arr)/sizeof((arr)[0]))
 #define CYCLIC(arr, idx) (&arr[idx++ % ARRAYSIZE(arr)])
 
-#define F(name) {#name, &name}
-#define F2(name) {#name, &name##_detour}
+#define FMTPTR "0x%08x"
+
+#define F(name) {#name, (const void *) &name}
+#define F2(name) {#name, (const void *) &name##_detour}
 
 static const char *IMG_Name_detour(IMG img);
 static IMG IMG_Open_detour(const char *fname);
@@ -34,7 +36,7 @@ static BOOL PIN_SetThreadData_detour(
     TLS_KEY key, const void *data, THREADID thread_id);
 static void *PIN_GetThreadData_detour(TLS_KEY key, THREADID thread_id);
 
-static void *g_functions[][2] = {
+static const void *g_functions[][2] = {
     // IMG - Image Object
     F(IMG_Next),
     F(IMG_Prev),
@@ -340,7 +342,7 @@ static void *PIN_GetThreadData_detour(TLS_KEY key, THREADID thread_id)
     return PIN_GetThreadData(key, thread_id);
 }
 
-static void single_int_callback(uint32_t value, void *arg)
+static void single_int_callback(uintptr_t value, void *arg)
 {
     py_single_int_callback(arg, value);
 }
@@ -350,7 +352,7 @@ static void *g_child_callback;
 static BOOL child_callback(CHILD_PROCESS child_process, void *v)
 {
     return py_single_int_bool_callback(
-        g_child_callback, (uint32_t) child_process);
+        g_child_callback, (uintptr_t) child_process);
 }
 
 static void *g_syscall_entry_callback;
@@ -359,7 +361,7 @@ static void syscall_entry_callback(
     THREADID thread_id, CONTEXT *ctx, SYSCALL_STANDARD std, void *v)
 {
     py_three_int_callback(
-        g_syscall_entry_callback, thread_id, (uint32_t) ctx, std);
+        g_syscall_entry_callback, thread_id, (uintptr_t) ctx, std);
 }
 
 static void *g_syscall_exit_callback;
@@ -368,7 +370,7 @@ static void syscall_exit_callback(
     THREADID thread_id, CONTEXT *ctx, SYSCALL_STANDARD std, void *v)
 {
     py_three_int_callback(
-        g_syscall_exit_callback, thread_id, (uint32_t) ctx, std);
+        g_syscall_exit_callback, thread_id, (uintptr_t) ctx, std);
 }
 
 int main(int argc, char *argv[])
@@ -382,8 +384,9 @@ int main(int argc, char *argv[])
 
     char buf[256];
     for (uint32_t idx = 0; idx < ARRAYSIZE(g_functions); idx++) {
-        sprintf(buf, "_pin_function_addr['%s'] = 0x%08lx",
-            g_functions[idx][0], g_functions[idx][1]);
+        sprintf(buf, "_pin_function_addr['%s'] = "FMTPTR,
+            (const char *) g_functions[idx][0],
+            (uintptr_t) g_functions[idx][1]);
         pyrun_simple_string(buf);
     }
 
@@ -424,8 +427,9 @@ int main(int argc, char *argv[])
     }
 
     void *py_globals = NULL, *py_value;
-    sprintf(buf, "import ctypes; ctypes.memmove(0x%08lx, "
-            "ctypes.byref(ctypes.c_int(id(globals()))), 4)", &py_globals);
+    sprintf(buf, "import ctypes; ctypes.memmove("FMTPTR", "
+            "ctypes.byref(ctypes.c_int(id(globals()))), 4)",
+            (uintptr_t) &py_globals);
     pyrun_simple_string(buf);
 
     // generic callback registration function
