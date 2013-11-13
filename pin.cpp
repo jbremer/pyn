@@ -2,16 +2,13 @@
 #include <stdint.h>
 #include <string.h>
 #include "pin.H"
+#include "py.h"
 
 // TODO fix memory leaks introduced by strdup
 #define strdup _strdup
 
 #define ARRAYSIZE(arr) (sizeof(arr)/sizeof((arr)[0]))
 #define CYCLIC(arr, idx) (&arr[idx++ % ARRAYSIZE(arr)])
-
-namespace Py {
-    #include "Python.h"
-}
 
 #define F(name) {#name, &name}
 #define F2(name) {#name, &name##_detour}
@@ -341,34 +338,33 @@ static void *PIN_GetThreadData_detour(TLS_KEY key, THREADID thread_id)
 
 static void single_int_callback(uint32_t value, void *arg)
 {
-    Py::PyObject_CallFunction((Py::PyObject *) arg, "i", value);
+    py_single_int_callback(arg, value);
 }
 
-static Py::PyObject *g_child_callback;
+static void *g_child_callback;
 
 static BOOL child_callback(CHILD_PROCESS child_process, void *v)
 {
-    // TODO return the actual return value
-    Py::PyObject_CallFunction(g_child_callback, "i", child_process);
-    return TRUE;
+    return py_single_int_bool_callback(
+        g_child_callback, (uint32_t) child_process);
 }
 
-static Py::PyObject *g_syscall_entry_callback;
+static void *g_syscall_entry_callback;
 
 static void syscall_entry_callback(
     THREADID thread_id, CONTEXT *ctx, SYSCALL_STANDARD std, void *v)
 {
-    Py::PyObject_CallFunction(
-        g_syscall_entry_callback, "iii", thread_id, ctx, std);
+    py_three_int_callback(
+        g_syscall_entry_callback, thread_id, (uint32_t) ctx, std);
 }
 
-static Py::PyObject *g_syscall_exit_callback;
+static void *g_syscall_exit_callback;
 
 static void syscall_exit_callback(
     THREADID thread_id, CONTEXT *ctx, SYSCALL_STANDARD std, void *v)
 {
-    Py::PyObject_CallFunction(
-        g_syscall_exit_callback, "iii", thread_id, ctx, std);
+    py_three_int_callback(
+        g_syscall_exit_callback, thread_id, (uint32_t) ctx, std);
 }
 
 int main(int argc, char *argv[])
@@ -376,19 +372,19 @@ int main(int argc, char *argv[])
     PIN_Init(argc, argv);
     PIN_InitSymbols();
 
-    Py::Py_Initialize();
+    py_init();
 
-    Py::PyRun_SimpleString("_pin_function_addr = {}");
+    pyrun_simple_string("_pin_function_addr = {}");
 
     char buf[256];
     for (uint32_t idx = 0; idx < ARRAYSIZE(g_functions); idx++) {
         sprintf(buf, "_pin_function_addr['%s'] = 0x%08lx",
             g_functions[idx][0], g_functions[idx][1]);
-        Py::PyRun_SimpleString(buf);
+        pyrun_simple_string(buf);
     }
 
     // we want to execute pypin in the current namespace
-    Py::PyRun_SimpleString("exec open('pypin.py', 'rb').read()");
+    pyrun_simple_string("exec open('pypin.py', 'rb').read()");
 
     // manually parse argv, because KNOB - do you even parse?!
     for (int i = 0, tool_arg_start = -1; i < argc; i++) {
@@ -406,18 +402,18 @@ int main(int argc, char *argv[])
 
         // python code injection!!1
         snprintf(buf, sizeof(buf), "exec open('%s', 'rb').read()", argv[i]);
-        Py::PyRun_SimpleString(buf);
+        pyrun_simple_string(buf);
     }
 
-    Py::PyObject *globals = NULL, *py_value;
+    void *globals = NULL, *py_value;
     sprintf(buf, "import ctypes; ctypes.memmove(0x%08lx, "
             "ctypes.byref(ctypes.c_int(id(globals()))), 4)", &globals);
-    Py::PyRun_SimpleString(buf);
+    pyrun_simple_string(buf);
 
     // generic callback registration function
 #define CALLBACK_REG(name, api) \
-    py_value = Py::PyString_FromString(#name); \
-    g_##name##_callback = Py::PyDict_GetItem(globals, py_value); \
+    py_value = pystring_from_string(#name); \
+    g_##name##_callback = pydict_get_item(globals, py_value); \
     if(g_##name##_callback != NULL) { \
         api(&name##_callback, NULL); \
     }
@@ -425,8 +421,8 @@ int main(int argc, char *argv[])
     // callback registration function for callbacks
     // with only one integer as parameter, and which return void
 #define CALLBACK_REG1(name, api, cast) \
-    py_value = Py::PyString_FromString(#name); \
-    py_value = Py::PyDict_GetItem(globals, py_value); \
+    py_value = pystring_from_string(#name); \
+    py_value = pydict_get_item(globals, py_value); \
     if(py_value != NULL) { \
         api((cast##CALLBACK) &single_int_callback, py_value); \
     }
@@ -444,6 +440,6 @@ int main(int argc, char *argv[])
     }
 
     PIN_StartProgram();
-    Py::Py_Finalize();
+    py_fini();
     return 0;
 }
