@@ -7,14 +7,14 @@ LINK = C:/ProgFiles86/Microsoft\ Visual\ Studio\ 10.0/VC/Bin/link.exe
 ifeq ($(OS),Windows_NT)
 	PYTHON = C:/Python27
 	OBJECTS86 = pin-x86.obj py-x86.obj
-	PINTOOLS = pypin-x86.dll
+	PINTOOLS = pyn-x86.dll
 else
 	PYTHON = /usr/include/python2.7
 	LIBS86 = $(PINTOOL)/ia32/runtime/cpplibs
 	LIBS64 = $(PINTOOL)/intel64/runtime/cpplibs
 	OBJECTS86 = pin-x86.o py-x86.o
 	OBJECTS64 = pin-x64.o py-x64.o
-	PINTOOLS = pypin-x86.so pypin-x64.so
+	PINTOOLS = pyn-x86.so pyn-x64.so
 endif
 
 STUFF = $(OBJECTS86) $(OBJECTS64) $(PINTOOLS)
@@ -33,7 +33,7 @@ pin-x86.obj: pin.cpp
 		/I$(PINTOOL)\extras\xed2-ia32\include \
 		/I$(PINTOOL)\extras\components\include $^ /Fo$@
 
-pypin-x86.dll: $(OBJECTS86)
+pyn-x86.dll: $(OBJECTS86)
 	$(LINK) /DLL /EXPORT:main /NODEFAULTLIB /NOLOGO /INCREMENTAL:NO /OPT:REF \
 		/MACHINE:x86 /ENTRY:Ptrace_DllMainCRTStartup@12 /BASE:0x55000000 \
 		/LIBPATH:$(PINTOOL)\ia32\lib /LIBPATH:$(PINTOOL)\ia32\lib-ext \
@@ -55,7 +55,7 @@ pin-x86.o: pin.cpp
 		-I$(PINTOOL)/source/tools/InstLib \
 		-O3 -fomit-frame-pointer -fno-strict-aliasing -c -o $@ $^
 
-pypin-x86.so: $(OBJECTS86)
+pyn-x86.so: $(OBJECTS86)
 	$(CXX) -shared -Wl,--hash-style=sysv -Wl,-Bsymbolic -m32 \
 		-Wl,--version-script=$(PINTOOL)/source/include/pin/pintool.ver \
 		-o $@ $^ -L$(PINTOOL)/ia32/lib -L$(PINTOOL)/ia32/lib-ext \
@@ -77,7 +77,7 @@ pin-x64.o: pin.cpp
 		-I$(PINTOOL)/source/tools/InstLib \
 		-O3 -fomit-frame-pointer -fno-strict-aliasing -c -o $@ $^ -fPIC
 
-pypin-x64.so: $(OBJECTS64)
+pyn-x64.so: $(OBJECTS64)
 	$(CXX) -shared -Wl,--hash-style=sysv -Wl,-Bsymbolic \
 		-Wl,--version-script=$(PINTOOL)/source/include/pin/pintool.ver \
 		-o $@ $^ -L$(PINTOOL)/intel64/lib -L$(PINTOOL)/intel64/lib-ext \

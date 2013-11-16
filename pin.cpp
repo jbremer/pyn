@@ -400,8 +400,8 @@ int main(int argc, char *argv[])
     pyrun_simple_string("x86, x64 = False, True");
 #endif
 
-    // we want to execute pypin in the current namespace
-    pyrun_simple_string("exec open('pypin.py', 'rb').read()");
+    // we want to execute pyn.py in the current namespace
+    pyrun_simple_string("exec open('pyn.py', 'rb').read()");
 
     // turns out that IARG_END is a macro which puts IARG_FILE_NAME and
     // IARG_LINE_NO, with their values accordingly, in the argument list as
