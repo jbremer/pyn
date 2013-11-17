@@ -278,13 +278,17 @@ for _name, _decl in _pin_function_decl.items():
     else:
         globals()[_name] = _decl(_pin_function_addr[_name])
 
+for _name in ('RTN', 'TRACE', 'BBL', 'INS'):
+    _helper = globals()['_' + _name + '_InsertCall']
+
+    def _insert_call(obj, action, cb, *args):
+        _insert_call_helper(_helper, obj, action, cb, args)
+
+    globals()[_name + '_InsertCall'] = _insert_call
+
 # the following line(s) are actually not required,
 # but these are for the strict syntax checker(s) - part #2
-_RTN_InsertCall = globals()['_RTN_InsertCall']
 _RTN_Replace = globals()['_RTN_Replace']
-_TRACE_InsertCall = globals()['_TRACE_InsertCall']
-_BBL_InsertCall = globals()['_BBL_InsertCall']
-_INS_InsertCall = globals()['_INS_InsertCall']
 _PIN_DefineTraceBuffer = globals()['_PIN_DefineTraceBuffer']
 _PIN_SpawnInternalThread = globals()['_PIN_SpawnInternalThread']
 
@@ -307,26 +311,10 @@ def _insert_call_helper(fn, obj, action, cb, args):
 
 # override functions which accept callback functions, because
 # they need some extra care
-def RTN_InsertCall(rtn, action, cb, *args):
-    _insert_call_helper(_RTN_InsertCall, rtn, action, cb, args)
-
-
 def RTN_Replace(rtn, func):
     func = AFUNPTR(func)
     _gc.append(func)
     _RTN_Replace(rtn, func)
-
-
-def TRACE_InsertCall(trace, action, cb, *args):
-    _insert_call_helper(_TRACE_InsertCall, trace, action, cb, args)
-
-
-def BBL_InsertCall(bbl, action, cb, *args):
-    _insert_call_helper(_BBL_InsertCall, bbl, action, cb, args)
-
-
-def INS_InsertCall(ins, action, cb, *args):
-    _insert_call_helper(_INS_InsertCall, ins, action, cb, args)
 
 
 def PIN_DefineTraceBuffer(record_size, num_pages, cb, arg):
