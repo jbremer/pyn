@@ -728,3 +728,95 @@ REG_MACHINE_LAST = REG_FPST_LAST
 REG_STATUS_FLAGS = iota()
 REG_DF_FLAG = iota()
 REG_APPLICATION_LAST = REG_DF_FLAG
+
+
+class Context(object):
+    _regs = dict((k[4:].lower(), v)
+                 for k, v in globals().items()
+                 if k.startswith('REG_'))
+
+    def __init__(self, ctx):
+        self.ctx = ctx
+
+    def __getitem__(self, key):
+        return PIN_GetContextReg(self.ctx, self._regs[key])
+
+    def __setitem__(self, key, value):
+        PIN_SetContextReg(self.ctx, self._regs[key], value)
+
+    def __getattr__(self, name):
+        return PIN_GetContextReg(self.ctx, self._regs[name])
+
+    def __setattr__(self, name, value):
+        if not name in self._regs:
+            object.__setattr__(self, name, value)
+        else:
+            PIN_SetContextReg(self.ctx, self._regs[name], value)
+
+
+class Image(object):
+    def __init__(self, img=None, address=None):
+        if not address is None:
+            self.img = IMG_FindByAddress(address)
+        else:
+            self.img = img
+
+    @staticmethod
+    def open(fname):
+        img = IMG_Open(fname)
+        return Image(img) if IMG_Valid(img) else None
+
+    def close(self):
+        IMG_Close(self.img)
+
+    @property
+    def name(self):
+        return IMG_Name(self.img)
+
+    @property
+    def valid(self):
+        return IMG_Valid(self.img)
+
+    @property
+    def low_address(self):
+        return IMG_LowAddress(self.img)
+
+    @property
+    def high_address(self):
+        return IMG_HighAddress(self.img)
+
+    @property
+    def address(self):
+        return self.low_address, self.high_address
+
+    @property
+    def main(self):
+        return IMG_IsMainExecutable(self.img)
+
+    @property
+    def static(self):
+        return IMG_IsStaticExecutable(self.img)
+
+    @property
+    def entry(self):
+        return IMG_Entry(self.img)
+
+
+class _Images(object):
+    def __init__(self, init=False):
+        if init:
+            self.img = APP_ImgHead()
+
+    def next(self):
+        if self.img == APP_ImgTail():
+            raise StopIteration
+
+        self.img = IMG_Next(self.img)
+        return Image(self.img)
+
+    def __iter__(self):
+        # provide a new object for multi-threaded support
+        return _Images(init=True)
+
+
+Images = _Images()
