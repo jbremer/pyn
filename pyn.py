@@ -1,5 +1,5 @@
 from ctypes import CFUNCTYPE, POINTER
-from ctypes import c_int, c_char_p, c_void_p, c_longlong
+from ctypes import c_int, c_long, c_char_p, c_void_p, c_longlong
 
 
 AFUNPTR = CFUNCTYPE(None)
@@ -117,7 +117,7 @@ _pin_function_decl = {
     'BBL_HasFallThrough': _i(c_int),
 
     # INS Instrumentation
-    '_INS_InsertCall': _v(c_int, c_int, AFUNPTR),
+    '_INS_InsertCall': _v(c_int, c_int),
 
     # INS Generic Inspection
     'INS_Category': _i(c_int),
@@ -272,12 +272,26 @@ _PIN_DefineTraceBuffer = globals()['_PIN_DefineTraceBuffer']
 _PIN_SpawnInternalThread = globals()['_PIN_SpawnInternalThread']
 
 
+def _insert_call_helper(fn, obj, action, cb, args):
+    # first extract the amount of parameters that will be required
+    # by the callback function and make an according declaration for it
+    ret, off = 0, 0
+    while off < len(args):
+        ret += 1
+        off += 1 + _iarg_table.get(args[off], 0)
+
+    decl = CFUNCTYPE(None, *[c_long for _ in xrange(ret)])
+
+    cb = decl(cb)
+    args = args + (IARG_LAST,)
+    _gc.extend((cb, args))
+    fn(obj, action, cb, *args)
+
+
 # override functions which accept callback functions, because
 # they need some extra care
 def RTN_InsertCall(rtn, action, cb, *args):
-    cb = AFUNPTR(cb)
-    _gc.append(cb)
-    _RTN_InsertCall(rtn, action, cb, *args)
+    _insert_call_helper(_RTN_InsertCall, rtn, action, cb, args)
 
 
 def RTN_Replace(rtn, func):
@@ -287,21 +301,15 @@ def RTN_Replace(rtn, func):
 
 
 def TRACE_InsertCall(trace, action, cb, *args):
-    cb = AFUNPTR(cb)
-    _gc.append(cb)
-    _TRACE_InsertCall(trace, action, cb, *args)
+    _insert_call_helper(_TRACE_InsertCall, trace, action, cb, args)
 
 
 def BBL_InsertCall(bbl, action, cb, *args):
-    cb = AFUNPTR(cb)
-    _gc.append(cb)
-    _BBL_InsertCall(bbl, action, cb, *args)
+    _insert_call_helper(_BBL_InsertCall, bbl, action, cb, args)
 
 
 def INS_InsertCall(ins, action, cb, *args):
-    cb = AFUNPTR(cb)
-    _gc.append(cb)
-    _INS_InsertCall(ins, action, cb, *args)
+    _insert_call_helper(_INS_InsertCall, ins, action, cb, args)
 
 
 def PIN_DefineTraceBuffer(record_size, num_pages, cb, arg):
@@ -364,6 +372,7 @@ IARG_SYSARG_VALUE = iota()
 IARG_SYSRET_VALUE = iota()
 IARG_SYSRET_ERRNO = iota()
 IARG_FUNCARG_CALLSITE_REFERENCE = iota()
+IARG_FUNCARG_CALLSITE_VALUE = iota()
 IARG_FUNCARG_ENTRYPOINT_REFERENCE = iota()
 IARG_FUNCARG_ENTRYPOINT_VALUE = iota()
 IARG_FUNCRET_EXITPOINT_REFERENCE = iota()
@@ -414,6 +423,11 @@ IARG_MEMORYOP_EA = iota()
 IARG_FILE_NAME = iota()
 IARG_LINE_NO = iota()
 IARG_LAST = iota()
+
+_iarg_table = {
+    IARG_ADDRINT: 1, IARG_PTR: 1, IARG_BOOL: 1, IARG_UINT32: 1,
+    IARG_REG_VALUE: 1, IARG_RETURN_REGS: 1,
+}
 
 UNDECORATION_COMPLETE = iota(0)
 UNDECORATION_NAME_ONLY = iota()
