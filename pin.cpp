@@ -349,14 +349,17 @@ static void *PIN_GetThreadData_detour(TLS_KEY key, THREADID thread_id)
 static void single_int_callback(uintptr_t value, void *arg)
 {
     py_single_int_callback(arg, value);
+    pyerr_print();
 }
 
 static void *g_child_callback;
 
 static BOOL child_callback(CHILD_PROCESS child_process, void *v)
 {
-    return py_single_int_bool_callback(
+    BOOL ret = py_single_int_bool_callback(
         g_child_callback, (uintptr_t) child_process);
+    pyerr_print();
+    return ret;
 }
 
 static void *g_syscall_entry_callback;
@@ -366,6 +369,7 @@ static void syscall_entry_callback(
 {
     py_three_int_callback(
         g_syscall_entry_callback, thread_id, (uintptr_t) ctx, std);
+    pyerr_print();
 }
 
 static void *g_syscall_exit_callback;
@@ -375,6 +379,7 @@ static void syscall_exit_callback(
 {
     py_three_int_callback(
         g_syscall_exit_callback, thread_id, (uintptr_t) ctx, std);
+    pyerr_print();
 }
 
 int main(int argc, char *argv[])
