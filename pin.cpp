@@ -28,6 +28,7 @@ static IMG IMG_Open_detour(const char *fname);
 static const char *RTN_Name_detour(RTN rtn);
 static const char *RTN_FindNameByAddress_detour(ADDRINT addr);
 static RTN RTN_CreateAt_detour(ADDRINT addr, const char *name);
+static const char *SEC_Name_detour(SEC sec);
 static const char *OPCODE_StringShort_detour(uint32_t opcode);
 static const char *INS_Mnemonic_detour(INS ins);
 static const char *CATEGORY_StringShort_detour(uint32_t num);
@@ -98,6 +99,24 @@ static const void *g_functions[][2] = {
     F(RTN_Address),
     F2(RTN_CreateAt),
     F(RTN_Replace),
+
+    // SEC - Section Object
+    F(SEC_Img),
+    F(SEC_Next),
+    F(SEC_Prev),
+    F(SEC_Invalid),
+    F(SEC_Valid),
+    F(SEC_RtnHead),
+    F(SEC_RtnTail),
+    F2(SEC_Name),
+    F(SEC_Type),
+    F(SEC_Mapped),
+    F(SEC_Data),
+    F(SEC_Address),
+    F(SEC_IsReadable),
+    F(SEC_IsWriteable),
+    F(SEC_IsExecutable),
+    F(SEC_Size),
 
     // TRACE - Single entrance, multiple exit
     F(TRACE_AddInstrumentFunction),
@@ -285,6 +304,11 @@ static RTN RTN_CreateAt_detour(ADDRINT addr, const char *name)
     // RTN_CreateAt takes a std::string as parameter,
     // hence the detour function
     return RTN_CreateAt(addr, name);
+}
+
+static const char *SEC_Name_detour(SEC sec)
+{
+    return strdup(SEC_Name(sec).c_str());
 }
 
 static const char *OPCODE_StringShort_detour(uint32_t opcode)
