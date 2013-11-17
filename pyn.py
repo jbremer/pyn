@@ -1,4 +1,4 @@
-from ctypes import CFUNCTYPE, POINTER
+from ctypes import CFUNCTYPE, POINTER, cast, memmove, create_string_buffer
 from ctypes import c_int, c_long, c_char_p, c_void_p, c_longlong
 
 
@@ -6,6 +6,23 @@ AFUNPTR = CFUNCTYPE(None)
 TRACE_BUFFER_CALLBACK = CFUNCTYPE(c_void_p, c_int, c_int, c_void_p,
                                   c_void_p, c_longlong, c_void_p)
 ROOT_THREAD_FUNC = CFUNCTYPE(None, c_void_p)
+
+
+def read_ptr(addr):
+    """Read a pointer at a given address."""
+    return cast(addr, POINTER(c_long)).contents.value
+
+
+def read_str(addr):
+    """Read a zero-terminated string from memory."""
+    return cast(addr, c_char_p).value
+
+
+def read_mem(addr, size):
+    """Read a chunk of memory."""
+    buf = create_string_buffer(size)
+    memmove(buf, addr, size)
+    return buf.raw
 
 
 # function with void return value
