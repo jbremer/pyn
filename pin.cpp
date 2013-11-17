@@ -436,8 +436,8 @@ int main(int argc, char *argv[])
 
     void *py_globals = NULL, *py_value;
     sprintf(buf, "import ctypes; ctypes.memmove("FMTPTR", "
-            "ctypes.byref(ctypes.c_int(id(globals()))), 4)",
-            (uintptr_t) &py_globals);
+            "ctypes.byref(ctypes.c_int(id(globals()))), %d)",
+            (uintptr_t) &py_globals, sizeof(uintptr_t));
     pyrun_simple_string(buf);
 
     // generic callback registration function

@@ -323,16 +323,26 @@ def PIN_SpawnInternalThread(cb, arg, stack_size, thread_uid):
     _gc.extend((cb, arg, thread_uid))
     _PIN_SpawnInternalThread(cb, arg, stack_size, thread_uid)
 
-_iota_value = 0
+_iota_index, _iota_value, _iota_iter = 0, 0, lambda idx, val: idx + 1
 
 
-def iota(num=None):
+def iota(num=None, it=None):
     """Returns an incremental number every iteration.
 
     This is a trimmed down version of Go's iota keyword.
     """
-    global _iota_value
-    _iota_value = _iota_value + 1 if num is None else num
+    global _iota_index, _iota_value, _iota_iter
+
+    if not it is None:
+        _iota_iter = it
+
+    if not num is None:
+        _iota_value = num
+        _iota_index = 0
+    else:
+        _iota_value = _iota_iter(_iota_index, _iota_value)
+        _iota_index += 1
+
     return _iota_value
 
 
