@@ -272,11 +272,11 @@ x86 = globals()['x86']
 x64 = globals()['x64']
 
 # not hacky at all!
-for name, decl in _pin_function_decl.items():
-    if name.startswith('_'):
-        globals()[name] = decl(_pin_function_addr[name[1:]])
+for _name, _decl in _pin_function_decl.items():
+    if _name.startswith('_'):
+        globals()[_name] = _decl(_pin_function_addr[_name[1:]])
     else:
-        globals()[name] = decl(_pin_function_addr[name])
+        globals()[_name] = _decl(_pin_function_addr[_name])
 
 # the following line(s) are actually not required,
 # but these are for the strict syntax checker(s) - part #2
