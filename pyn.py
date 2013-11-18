@@ -748,6 +748,119 @@ REG_DF_FLAG = iota()
 REG_APPLICATION_LAST = REG_DF_FLAG
 
 
+class Symbol(object):
+    def __init__(self, sym):
+        self.sym = sym
+
+    @property
+    def name(self):
+        return SYM_Name(self.sym)
+
+    @property
+    def valid(self):
+        return SYM_Valid(self.sym)
+
+    @property
+    def dynamic(self):
+        return SYM_Dynamic(self.sym)
+
+    @property
+    def ifunc(self):
+        return SYM_IFunc(self.sym)
+
+    @property
+    def value(self):
+        return SYM_Value(self.sym)
+
+    @property
+    def index(self):
+        return SYM_Index(self.sym)
+
+    @property
+    def address(self):
+        return SYM_Address(self.sym)
+
+
+class Routine(object):
+    def __init__(self, rtn=None, address=None):
+        if not address is None:
+            self.rtn = RTN_FindByAddress(address)
+        else:
+            self.rtn = rtn
+
+    @property
+    def name(self):
+        return RTN_Name(self.rtn)
+
+    @property
+    def valid(self):
+        return RTN_Valid(self.rtn)
+
+    @property
+    def symbol(self):
+        return RTN_Sym(self.rtn)
+
+    @property
+    def range(self):
+        return RTN_Range(self.rtn)
+
+    @property
+    def size(self):
+        return RTN_Size(self.rtn)
+
+    # TODO many more functions
+
+
+class Section(object):
+    def __init__(self, sec):
+        self.sec = sec
+
+    @property
+    def image(self):
+        return Image(SEC_Img(self.sec))
+
+    @property
+    def valid(self):
+        return SEC_Valid(self.sec)
+
+    @property
+    def routines(self):
+        return _Iter(typ=Routine, start=lambda: SEC_RtnHead(self.sec),
+                     end=lambda: SEC_RtnTail(self.sec), it=RTN_Next)
+
+    @property
+    def name(self):
+        return SEC_Name(self.sec)
+
+    @property
+    def mapped(self):
+        return SEC_Mapped(self.sec)
+
+    @property
+    def data(self):
+        return SEC_Data(self.sec)
+
+    @property
+    def address(self):
+        return SEC_Address(self.sec)
+
+    @property
+    def readable(self):
+        return SEC_IsReadable(self.sec)
+
+    @property
+    def writeable(self):
+        return SEC_IsWriteable(self.sec)
+
+    @property
+    def executable(self):
+        return SEC_IsExecutable(self.sec)
+
+    @property
+    def size(self):
+        return SEC_Size(self.sec)
+
+
 class Context(object):
     _regs = dict((k[4:].lower(), v)
                  for k, v in globals().items()
@@ -819,22 +932,47 @@ class Image(object):
     def entry(self):
         return IMG_Entry(self.img)
 
+    @property
+    def sections(self):
+        return _Iter(typ=Section, start=lambda: IMG_SecHead(self.img),
+                     end=lambda: IMG_SecTail(self.img), it=SEC_Next)
 
-class _Images(object):
-    def __init__(self, init=False):
+    @property
+    def symbols(self):
+        return _Iter(typ=Symbol, start=lambda: IMG_RegsymHead(self.img),
+                     valid=SYM_Valid, it=SYM_Next)
+
+    def routine(self, name):
+        rtn = RTN_FindByName(self.img, name)
+        return Routine(rtn) if RTN_Valid(rtn) else None
+
+
+class _Iter(object):
+    def __init__(self, typ=None, start=None, end=None, valid=None,
+                 it=None, init=False):
+        self.typ = typ
+        self.start = start
+        self.end = end
+        self.valid = valid
+        self.it = it
+
         if init:
-            self.img = APP_ImgHead()
+            self.obj = start()
 
     def next(self):
-        if self.img == APP_ImgTail():
+        if self.end and self.obj == self.end():
             raise StopIteration
 
-        self.img = IMG_Next(self.img)
-        return Image(self.img)
+        self.obj = self.it(self.obj)
+        if self.valid and not self.valid(self.obj):
+            raise StopIteration
+
+        return self.typ(self.obj)
 
     def __iter__(self):
         # provide a new object for multi-threaded support
-        return _Images(init=True)
+        return _Iter(init=True, typ=self.typ, start=self.start,
+                     end=self.end, valid=self.valid, it=self.it)
 
 
-Images = _Images()
+Images = _Iter(typ=Image, start=APP_ImgHead, end=APP_ImgTail, it=IMG_Next)
