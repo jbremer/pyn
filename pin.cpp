@@ -466,8 +466,7 @@ int main(int argc, char *argv[])
 
     // generic callback registration function
 #define CALLBACK_REG(name, api) \
-    py_value = pystring_from_string(#name); \
-    g_##name##_callback = pydict_get_item(py_globals, py_value); \
+    g_##name##_callback = pydict_get_item_string(py_globals, #name); \
     if(g_##name##_callback != NULL) { \
         api(&name##_callback, NULL); \
     }
@@ -475,8 +474,7 @@ int main(int argc, char *argv[])
     // callback registration function for callbacks
     // with only one integer as parameter, and which return void
 #define CALLBACK_REG1(name, api, cast) \
-    py_value = pystring_from_string(#name); \
-    py_value = pydict_get_item(py_globals, py_value); \
+    py_value = pydict_get_item_string(py_globals, #name); \
     if(py_value != NULL) { \
         api((cast##CALLBACK) &single_int_callback, py_value); \
     }
