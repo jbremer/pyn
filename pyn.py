@@ -748,6 +748,35 @@ REG_DF_FLAG = iota()
 REG_APPLICATION_LAST = REG_DF_FLAG
 
 
+class Instruction(object):
+    def __init__(self, ins):
+        self.ins = ins
+
+    @property
+    def valid(self):
+        return INS_Valid(self.ins)
+
+    @property
+    def address(self):
+        return INS_Address(self.ins)
+
+    @property
+    def size(self):
+        return INS_Size(self.ins)
+
+    @property
+    def next_address(self):
+        return INS_NextAddress(self.ins)
+
+    @property
+    def routine(self):
+        return Routine(INS_Rtn(self.ins))
+
+    @property
+    def disasm(self):
+        return INS_Disassemble(self.ins)
+
+
 class Symbol(object):
     def __init__(self, sym):
         self.sym = sym
