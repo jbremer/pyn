@@ -955,15 +955,17 @@ class _Iter(object):
         self.end = end
         self.valid = valid
         self.it = it
-
-        if init:
-            self.obj = start()
+        self.obj = None
 
     def next(self):
         if self.end and self.obj == self.end():
             raise StopIteration
 
-        self.obj = self.it(self.obj)
+        if self.obj is None:
+            self.obj = self.start()
+        else:
+            self.obj = self.it(self.obj)
+
         if self.valid and not self.valid(self.obj):
             raise StopIteration
 
