@@ -47,6 +47,11 @@ void py_three_int_callback(void *obj, uintptr_t a, uintptr_t b, uintptr_t c)
     PyObject_CallFunction((PyObject *) obj, _("lll"), a, b, c);
 }
 
+void py_two_obj_one_int_callback(void *obj, void *a, void *b, uintptr_t c)
+{
+    PyObject_CallFunction((PyObject *) obj, _("OOl"), a, b, c);
+}
+
 void pyerr_print()
 {
     PyErr_Print();

@@ -376,6 +376,12 @@ static void single_int_callback(uintptr_t value, void *arg)
     pyerr_print();
 }
 
+static void two_obj_one_int_callback(uintptr_t value, void **args)
+{
+    py_two_obj_one_int_callback(args[0], args[1], args[2], value);
+    pyerr_print();
+}
+
 static void *g_child_callback;
 
 static BOOL child_callback(CHILD_PROCESS child_process, void *v)
@@ -479,14 +485,35 @@ int main(int argc, char *argv[])
         api((cast##CALLBACK) &single_int_callback, py_value); \
     }
 
+#define CALLBACK_REG1EX(name, wrapper, api, cast) { \
+    static void *_##name##_args[3] = { \
+        pyn_callback_helper, \
+        pydict_get_item_string(py_globals, #name), \
+        pydict_get_item_string(py_globals, #wrapper), \
+    }; \
+    if(_##name##_args[1] != NULL) { \
+        api((cast##CALLBACK) &two_obj_one_int_callback, _##name##_args); \
+    }}
+
     if(py_globals != NULL) {
+        void *pyn_callback_helper = pydict_get_item_string(
+            py_globals, "_callback_helper");
+
         CALLBACK_REG1(fini, PIN_AddFiniFunction, FINI_);
         CALLBACK_REG(child, PIN_AddFollowChildProcessFunction);
         CALLBACK_REG1(img_load, IMG_AddInstrumentFunction, IMAGE);
+        CALLBACK_REG1EX(img_load2, Image, IMG_AddInstrumentFunction, IMAGE);
         CALLBACK_REG1(img_unload, IMG_AddUnloadFunction, IMAGE);
+        CALLBACK_REG1EX(img_unload2, Image, IMG_AddUnloadFunction, IMAGE);
         CALLBACK_REG1(routine, RTN_AddInstrumentFunction, RTN_INSTRUMENT_);
+        CALLBACK_REG1EX(routine2, Routine,
+            RTN_AddInstrumentFunction, RTN_INSTRUMENT_);
         CALLBACK_REG1(trace, TRACE_AddInstrumentFunction, TRACE_INSTRUMENT_);
+        CALLBACK_REG1EX(trace2, Trace,
+            TRACE_AddInstrumentFunction, TRACE_INSTRUMENT_);
         CALLBACK_REG1(instr, INS_AddInstrumentFunction, INS_INSTRUMENT_);
+        CALLBACK_REG1EX(instr2, Instruction,
+            INS_AddInstrumentFunction, INS_INSTRUMENT_);
         CALLBACK_REG(syscall_entry, PIN_AddSyscallEntryFunction);
         CALLBACK_REG(syscall_exit, PIN_AddSyscallExitFunction);
     }

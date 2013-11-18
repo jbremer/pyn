@@ -1083,3 +1083,9 @@ class _Iter(object):
 
 
 Images = _Iter(typ=Image, start=APP_ImgHead, end=APP_ImgTail, it=IMG_Next)
+
+
+# some helper functions which do all the hard work of casting the parameters
+# appropriately, until I find the correct way to do it directly natively
+def _callback_helper(cb, typ, obj):
+    return cb(typ(obj))
