@@ -777,6 +777,82 @@ class Instruction(object):
         return INS_Disassemble(self.ins)
 
 
+class BasicBlock(object):
+    def __init__(self, bbl):
+        self.bbl = bbl
+
+    @property
+    def valid(self):
+        return BBL_Valid(self.bbl)
+
+    @property
+    def original(self):
+        return BBL_Original(self.bbl)
+
+    @property
+    def address(self):
+        return BBL_Address(self.bbl)
+
+    @property
+    def size(self):
+        return BBL_Size(self.bbl)
+
+    @property
+    def fall_through(self):
+        return BBL_HasFallThrough(self.bbl)
+
+    @property
+    def num_ins(self):
+        return BBL_NumIns(self.bbl)
+
+    @property
+    def instructions(self):
+        return _Iter(typ=Instruction, start=lambda: BBL_InsHead(self.bbl),
+                     end=lambda: BBL_InsTail(self.bbl), it=INS_Next)
+
+
+class Trace(object):
+    def __init__(self, trc):
+        self.trc = trc
+
+    @property
+    def original(self):
+        return TRACE_Original(self.trc)
+
+    @property
+    def address(self):
+        return TRACE_Address(self.trc)
+
+    @property
+    def size(self):
+        return TRACE_Size(self.trc)
+
+    @property
+    def routine(self):
+        return Routine(TRACE_Rtn(self.trc))
+
+    @property
+    def fall_through(self):
+        return TRACE_HasFallThrough(self.trc)
+
+    @property
+    def bbls(self):
+        return _Iter(typ=BasicBlock, start=lambda: TRACE_BblHead(self.trc),
+                     end=lambda: TRACE_BblTail(self.trc), it=BBL_Next)
+
+    @property
+    def num_bbl(self):
+        return TRACE_NumBbl(self.trc)
+
+    @property
+    def num_ins(self):
+        return TRACE_NumIns(self.trc)
+
+    @property
+    def stub_size(self):
+        return TRACE_StubSize(self.trc)
+
+
 class Symbol(object):
     def __init__(self, sym):
         self.sym = sym
