@@ -1053,8 +1053,7 @@ class Image(object):
 
 
 class _Iter(object):
-    def __init__(self, typ=None, start=None, end=None, valid=None,
-                 it=None, init=False):
+    def __init__(self, typ=None, start=None, end=None, valid=None, it=None):
         self.typ = typ
         self.start = start
         self.end = end
@@ -1078,8 +1077,8 @@ class _Iter(object):
 
     def __iter__(self):
         # provide a new object for multi-threaded support
-        return _Iter(init=True, typ=self.typ, start=self.start,
-                     end=self.end, valid=self.valid, it=self.it)
+        return _Iter(typ=self.typ, start=self.start, end=self.end,
+                     valid=self.valid, it=self.it)
 
 
 Images = _Iter(typ=Image, start=APP_ImgHead, end=APP_ImgTail, it=IMG_Next)
