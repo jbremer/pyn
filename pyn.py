@@ -757,7 +757,7 @@ class Instruction(object):
         return INS_Valid(self.ins)
 
     @property
-    def address(self):
+    def addr(self):
         return INS_Address(self.ins)
 
     @property
@@ -765,7 +765,7 @@ class Instruction(object):
         return INS_Size(self.ins)
 
     @property
-    def next_address(self):
+    def next_addr(self):
         return INS_NextAddress(self.ins)
 
     @property
@@ -775,6 +775,10 @@ class Instruction(object):
     @property
     def disasm(self):
         return INS_Disassemble(self.ins)
+
+    @property
+    def target(self):
+        return INS_DirectBranchOrCallTargetAddress(self.ins)
 
 
 class BasicBlock(object):
@@ -790,7 +794,7 @@ class BasicBlock(object):
         return BBL_Original(self.bbl)
 
     @property
-    def address(self):
+    def addr(self):
         return BBL_Address(self.bbl)
 
     @property
@@ -820,7 +824,7 @@ class Trace(object):
         return TRACE_Original(self.trc)
 
     @property
-    def address(self):
+    def addr(self):
         return TRACE_Address(self.trc)
 
     @property
@@ -882,14 +886,14 @@ class Symbol(object):
         return SYM_Index(self.sym)
 
     @property
-    def address(self):
+    def addr(self):
         return SYM_Address(self.sym)
 
 
 class Routine(object):
-    def __init__(self, rtn=None, address=None):
-        if not address is None:
-            self.rtn = RTN_FindByAddress(address)
+    def __init__(self, rtn=None, addr=None):
+        if not addr is None:
+            self.rtn = RTN_FindByAddress(addr)
         else:
             self.rtn = rtn
 
@@ -946,7 +950,7 @@ class Section(object):
         return SEC_Data(self.sec)
 
     @property
-    def address(self):
+    def addr(self):
         return SEC_Address(self.sec)
 
     @property
@@ -991,9 +995,9 @@ class Context(object):
 
 
 class Image(object):
-    def __init__(self, img=None, address=None):
-        if not address is None:
-            self.img = IMG_FindByAddress(address)
+    def __init__(self, img=None, addr=None):
+        if not addr is None:
+            self.img = IMG_FindByAddress(addr)
         else:
             self.img = img
 
@@ -1014,16 +1018,16 @@ class Image(object):
         return IMG_Valid(self.img)
 
     @property
-    def low_address(self):
+    def low_addr(self):
         return IMG_LowAddress(self.img)
 
     @property
-    def high_address(self):
+    def high_addr(self):
         return IMG_HighAddress(self.img)
 
     @property
-    def address(self):
-        return self.low_address, self.high_address
+    def addr(self):
+        return self.low_addr, self.high_addr
 
     @property
     def main(self):
