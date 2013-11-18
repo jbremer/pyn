@@ -806,7 +806,7 @@ class BasicBlock(object):
         return BBL_NumIns(self.bbl)
 
     @property
-    def instructions(self):
+    def insns(self):
         return _Iter(typ=Instruction, start=lambda: BBL_InsHead(self.bbl),
                      end=lambda: BBL_InsTail(self.bbl), it=INS_Next)
 
@@ -1079,6 +1079,10 @@ class _Iter(object):
         # provide a new object for multi-threaded support
         return _Iter(typ=self.typ, start=self.start, end=self.end,
                      valid=self.valid, it=self.it)
+
+    def __getitem__(self, key):
+        # this is very expensive for larger sets.. but pretty flexible
+        return [obj for obj in self][key]
 
 
 Images = _Iter(typ=Image, start=APP_ImgHead, end=APP_ImgTail, it=IMG_Next)
