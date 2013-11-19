@@ -439,6 +439,11 @@ int main(int argc, char *argv[])
     pyrun_simple_string("x86, x64 = False, True");
 #endif
 
+#define G(value) \
+    sprintf(buf, "%s = %d", #value, value); pyrun_simple_string(buf);
+
+#include "pyn-globals.h"
+
     // we want to execute pyn.py in the current namespace
     pyrun_simple_string("exec open('pyn.py', 'rb').read()");
 
