@@ -16,8 +16,12 @@
 
 #if ULONG_MAX == UINT_MAX
 # define FMTPTR "0x%08x"
+# define x86 1
+# define x64 0
 #else
 # define FMTPTR "0x%016lx"
+# define x86 0
+# define x64 1
 #endif
 
 #define F(name) {#name, (const void *) &name}
@@ -429,7 +433,7 @@ int main(int argc, char *argv[])
         pyrun_simple_string(buf);
     }
 
-#if ULONG_MAX == UINT_MAX
+#if x86
     pyrun_simple_string("x86, x64 = True, False");
 #else
     pyrun_simple_string("x86, x64 = False, True");
